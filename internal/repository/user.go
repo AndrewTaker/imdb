@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User struct {
@@ -25,46 +24,23 @@ func NewUserRepository(c *mongo.Collection) *UserRepository {
 	return &UserRepository{c: c}
 }
 
-type PaginationOptions struct {
-	Limit, Offset int64
-}
-
-type UserSortOptions struct {
-	SortBy SortableVar
-	Order  OrderVar
-}
-
-type SortableVar string
-
-var CreatedAt SortableVar = "created_at"
-var ID SortableVar = "_id"
-
-type OrderVar int8
-
-var ASC OrderVar = 1
-var DESC OrderVar = -1
-
-func CreateOptions(pag PaginationOptions, sort []UserSortOptions) *options.FindOptions {
-	opts := options.Find()
-	opts.SetLimit(pag.Limit)
-	opts.SetSkip(pag.Offset)
-	for _, s := range sort {
-		opts.SetSort(bson.D{{Key: string(s.SortBy), Value: s.Order}})
-	}
-
-	return opts
-}
-
-func (r *UserRepository) GetAll(ctx context.Context, pag PaginationOptions, sort []UserSortOptions) ([]User, error) {
-	opts := CreateOptions(pag, sort)
-	rows, err := r.c.Find(ctx, bson.M{}, opts)
+func (r *UserRepository) GetAll(ctx context.Context, pag PaginationOptions, sort []SortOptions) ([]User, error) {
+	opts := CreateQueryOptions(pag, sort)
+	rows, err := r.c.Find(ctx, bson.D{}, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close(ctx)
 
 	users := make([]User, 0)
-	if err := rows.All(ctx, &users); err != nil {
+	for rows.Next(ctx) {
+		var user User
+		if err := rows.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
