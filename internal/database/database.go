@@ -29,5 +29,16 @@ func NewMongoClient(dsn string) (*mongo.Client, error) {
 		return nil, fmt.Errorf("mongo ping error: %w", err)
 	}
 
+	collections := []string{"users", "movies"}
+	err = seedCollections(client.Database("imdb"), collections)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ensureIndexes(client.Database("imdb"))
+	if err != nil {
+		return nil, err
+	}
+
 	return client, nil
 }
