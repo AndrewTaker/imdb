@@ -36,7 +36,7 @@ func (s *UserService) GetByID(ctx context.Context, id string) (*repository.User,
 func (s *UserService) GetAll(
 	ctx context.Context,
 	pag repository.PaginationOptions,
-	sort []repository.UserSortOptions,
+	sort []repository.SortOptions,
 ) ([]repository.User, error) {
 	return s.r.GetAll(ctx, pag, sort)
 }
