@@ -41,6 +41,8 @@ func main() {
 	mux.HandleFunc("POST /movies", mh.Create)
 	mux.HandleFunc("GET /movies", mh.GetAll)
 	mux.HandleFunc("GET /movies/{id}", mh.GetByID)
+	mux.HandleFunc("DELETE /movies/{id}", mh.Delete)
+	mux.HandleFunc("PATCH /movies/{id}", mh.Update)
 
 	log.Println("listening on 4444")
 	log.Fatal(http.ListenAndServe(":4444", mux))
