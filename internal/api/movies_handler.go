@@ -17,6 +17,26 @@ func NewMoviesHandler(s *service.MoviesService, l *slog.Logger) *MoviesHandler {
 	return &MoviesHandler{s: s, l: l}
 }
 
+func (h *MoviesHandler) Create(w http.ResponseWriter, r *http.Request) {
+	h.l.Info(getHostWithUri(r), "method", r.Method)
+
+	var payload CreateMovieRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.l.Error("MoviesHandler.Create", "decoding error", err)
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := h.s.Create(r.Context(), payload.Title, payload.Genres, payload.Year)
+	if err != nil {
+		h.l.Error("MoviesHandler.Create", "db error", err)
+		http.Error(w, "could not save", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.l.Info(getHostWithUri(r), "method", r.Method)
 	var filters []repository.FilterOptions
@@ -53,11 +73,11 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	moviesResponse := make([]MovieResponse, len(movies))
 	for i, m := range movies {
 		moviesResponse[i] = MovieResponse{
-			ID:     m.ID.Hex(),
-			Title:  m.Title,
-			Year:   m.Year,
-			Genres: m.Genres,
-			Rating: m.Rating,
+			ID:            m.ID.Hex(),
+			Title:         m.Title,
+			Year:          m.Year,
+			Genres:        m.Genres,
+			AverageRating: m.AverageRating,
 		}
 	}
 
@@ -87,7 +107,7 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	movieResponse.Genres = movie.Genres
 	movieResponse.ID = movie.ID.Hex()
 	movieResponse.Year = movie.Year
-	movieResponse.Rating = movie.Rating
+	movieResponse.AverageRating = movie.AverageRating
 
 	w.Header().Set("Content-type", "application/json")
 	if err := json.NewEncoder(w).Encode(movieResponse); err != nil {

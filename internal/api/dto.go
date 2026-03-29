@@ -6,9 +6,15 @@ type LoginRequest struct {
 }
 
 type MovieResponse struct {
-	ID     string   `json:"id"`
-	Title  string   `json:"title"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Genres        []string `json:"genres"`
+	Year          int      `json:"year"`
+	AverageRating float64  `json:"average_rating"`
+}
+
+type CreateMovieRequest struct {
+	Title  string   `json:"string"`
 	Genres []string `json:"genres"`
 	Year   int      `json:"year"`
-	Rating float64  `json:"rating"`
 }

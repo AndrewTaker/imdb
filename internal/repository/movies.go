@@ -10,11 +10,19 @@ import (
 )
 
 type Movie struct {
-	ID     primitive.ObjectID `bson:"_id,omitempty"`
-	Title  string             `bson:"title"`
-	Genres []string           `bson:"genres"`
-	Year   int                `bson:"year"`
-	Rating float64            `bson:"rating"`
+	ID            primitive.ObjectID `bson:"_id,omitempty"`
+	Title         string             `bson:"title"`
+	Genres        []string           `bson:"genres"`
+	Year          int                `bson:"year"`
+	AverageRating float64            `bson:"average_rating"`
+	VoteCount     int                `bson:"vote_count"`
+}
+
+type Rating struct {
+	ID      primitive.ObjectID `bson:"_id,omitempty"`
+	MovieID primitive.ObjectID `bson:"movie_id"`
+	UserID  primitive.ObjectID `bson:"user_id"`
+	Score   int                `bson:"score"` // 1-10
 }
 
 type MoviesRepository struct {
@@ -75,4 +83,14 @@ func (r *MoviesRepository) GetByID(ctx context.Context, id string) (*Movie, erro
 	}
 
 	return &movie, nil
+}
+
+func (r *MoviesRepository) AlreadyExists(ctx context.Context, title string, year int) bool {
+	filter := bson.D{{"title", title}, {"year", year}}
+	result, err := r.c.CountDocuments(ctx, filter, nil)
+	if err != nil || result > 0 {
+		return true
+	}
+
+	return false
 }
