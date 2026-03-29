@@ -30,7 +30,16 @@ func ensureIndexes(d *mongo.Database) error {
 		},
 		Options: options.Index().SetUnique(true),
 	}
-
 	_, err := d.Collection("users").Indexes().CreateOne(context.Background(), userIndex)
+
+	genresIndex := mongo.IndexModel{
+		Keys: bson.D{{Key: "genres", Value: 1}},
+		Options: options.Index().SetCollation(&options.Collation{
+			Locale:   "en",
+			Strength: 2,
+		}),
+	}
+	_, err = d.Collection("movies").Indexes().CreateOne(context.Background(), genresIndex)
+
 	return err
 }
