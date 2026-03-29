@@ -38,8 +38,10 @@ func (r *MoviesRepository) Create(ctx context.Context, title string, genres []st
 }
 
 func (r *MoviesRepository) GetAll(ctx context.Context, pag PaginationOptions, sort []SortOptions, filter []FilterOptions) ([]Movie, error) {
-	opts := CreateQueryOptions(pag, sort)
-	rows, err := r.c.Find(ctx, bson.D{}, opts)
+	opts := CreateQueryOptions(pag, sort, filter)
+	filters := CreateFilterOptions(filter)
+
+	rows, err := r.c.Find(ctx, filters, opts)
 	if err != nil {
 		return nil, err
 	}

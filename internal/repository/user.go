@@ -25,7 +25,7 @@ func NewUserRepository(c *mongo.Collection) *UserRepository {
 }
 
 func (r *UserRepository) GetAll(ctx context.Context, pag PaginationOptions, sort []SortOptions) ([]User, error) {
-	opts := CreateQueryOptions(pag, sort)
+	opts := CreateQueryOptions(pag, sort, nil)
 	rows, err := r.c.Find(ctx, bson.D{}, opts)
 	if err != nil {
 		return nil, err

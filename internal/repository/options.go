@@ -10,12 +10,12 @@ type PaginationOptions struct {
 }
 
 type SortOptions struct {
-	SortBy SortableVar
+	SortBy string
 	Order  OrderVar
 }
 
 type FilterOptions struct {
-	FilterBy FilterableVar
+	FilterBy string
 	Value    any
 }
 
@@ -33,22 +33,34 @@ var (
 func CreateFilterOptions(filters []FilterOptions) bson.D {
 	filterBy := bson.D{}
 	for _, f := range filters {
-		filterBy = append(filterBy, bson.E{Key: string(f.FilterBy), Value: f.Value})
+		if f.FilterBy != "" {
+			filterBy = append(filterBy, bson.E{Key: f.FilterBy, Value: f.Value})
+		}
 	}
 
 	return filterBy
 }
 
-func CreateQueryOptions(pag PaginationOptions, sort []SortOptions) *options.FindOptions {
+func CreateQueryOptions(pag PaginationOptions, sort []SortOptions, filter []FilterOptions) *options.FindOptions {
 	opts := options.Find()
 	opts.SetLimit(int64(pag.Limit))
 	opts.SetSkip(int64(pag.Offset))
 
 	sortBy := bson.D{}
 	for _, s := range sort {
-		sortBy = append(sortBy, bson.E{Key: string(s.SortBy), Value: s.Order})
+		sortBy = append(sortBy, bson.E{Key: s.SortBy, Value: s.Order})
 	}
 	opts.SetSort(sortBy)
+
+	for _, f := range filter {
+		if f.FilterBy == "genres" {
+			opts.SetCollation(&options.Collation{
+				Locale:   "en",
+				Strength: 2,
+			})
+			break
+		}
+	}
 
 	return opts
 }
