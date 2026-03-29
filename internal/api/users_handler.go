@@ -46,14 +46,17 @@ func (h *UsersHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	// for local usage only
 	token := h.p.Generate(user.ID.Hex(), 24*time.Hour)
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{
+	err = json.NewEncoder(w).Encode(map[string]string{
 		"token": token,
-	}); err != nil {
+	})
+	if err != nil {
 		h.l.Error("UsersHandler.SignIn", "encoding error", err, "email", payload.Email)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *UsersHandler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -72,4 +75,6 @@ func (h *UsersHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
 }
