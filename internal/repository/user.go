@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,14 +51,9 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*User, e
 	return &u, err
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id string) (*User, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid id format: %w", err)
-	}
-
+func (r *UserRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*User, error) {
 	var u User
-	err = r.c.FindOne(ctx, bson.M{"_id": objID}).Decode(&u)
+	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&u)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {

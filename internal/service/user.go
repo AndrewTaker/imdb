@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"imdb/internal/repository"
 	"imdb/internal/security"
 	"log/slog"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserService struct {
@@ -30,7 +33,12 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*repository
 }
 
 func (s *UserService) GetByID(ctx context.Context, id string) (*repository.User, error) {
-	return s.r.GetByID(ctx, id)
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id format: %w", err)
+	}
+
+	return s.r.GetByID(ctx, objID)
 }
 
 func (s *UserService) GetAll(
