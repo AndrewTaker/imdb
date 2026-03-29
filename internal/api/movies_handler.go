@@ -19,15 +19,30 @@ func NewMoviesHandler(s *service.MoviesService, l *slog.Logger) *MoviesHandler {
 
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.l.Info(getHostWithUri(r), "method", r.Method)
+	var filters []repository.FilterOptions
+
 	limit := getIntQuery(r, "limit", 10)
 	offset := getIntQuery(r, "offset", 0)
-	h.l.Info("pag values", "offset", offset, "limit", limit)
+
+	if limit > 25 {
+		http.Error(w, "limit capacity is 25", http.StatusBadRequest)
+		return
+	}
+
+	year := getIntQuery(r, "year", 0)
+	if year != 0 {
+		filters = append(filters, repository.FilterOptions{FilterBy: "year", Value: year})
+	}
+	genre := getStringQuery(r, "genre", "")
+	if genre != "" {
+		filters = append(filters, repository.FilterOptions{FilterBy: "genres", Value: genre})
+	}
 
 	movies, err := h.s.GetAll(
 		r.Context(),
 		repository.PaginationOptions{Limit: limit, Offset: offset},
 		nil,
-		nil,
+		filters,
 	)
 	if err != nil {
 		h.l.Error("err getting movies", "error", err)
@@ -35,18 +50,18 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-type", "application/json")
-
 	moviesResponse := make([]MoviesResponse, len(movies))
-	for _, m := range movies {
-		moviesResponse = append(moviesResponse, MoviesResponse{
+	for i, m := range movies {
+		moviesResponse[i] = MoviesResponse{
 			ID:     m.ID.Hex(),
 			Title:  m.Title,
 			Year:   m.Year,
 			Genres: m.Genres,
 			Rating: m.Rating,
-		})
+		}
 	}
+
+	w.Header().Set("Content-type", "application/json")
 	if err := json.NewEncoder(w).Encode(moviesResponse); err != nil {
 		h.l.Error("err encoding movies", "error", err)
 		http.Error(w, "could not get movies", http.StatusInternalServerError)
