@@ -37,6 +37,32 @@ func (h *MoviesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+func (h *MoviesHandler) Update(w http.ResponseWriter, r *http.Request) {
+	h.l.Info(getHostWithUri(r), "method", r.Method)
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	var payload UpdateMovieRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.l.Error("MoviesHandler.Update", "decoding error", err)
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := h.s.PartialUpdate(r.Context(), id, payload.Title, payload.Year, payload.Genres)
+	if err != nil {
+		h.l.Error("MoviesHandler.Update", "db error", err)
+		http.Error(w, "could not update", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.l.Info(getHostWithUri(r), "method", r.Method)
 	var filters []repository.FilterOptions
@@ -65,7 +91,7 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		filters,
 	)
 	if err != nil {
-		h.l.Error("err getting movies", "error", err)
+		h.l.Error("MoviesHandler.GetAll", "error", err)
 		http.Error(w, "could not get movies", http.StatusInternalServerError)
 		return
 	}
@@ -81,12 +107,15 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-type", "application/json")
-	if err := json.NewEncoder(w).Encode(moviesResponse); err != nil {
-		h.l.Error("err encoding movies", "error", err)
+	err = json.NewEncoder(w).Encode(moviesResponse)
+	if err != nil {
+		h.l.Error("MoviesHandler.GetAll", "error", err)
 		http.Error(w, "could not get movies", http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +127,7 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	movie, err := h.s.GetByID(r.Context(), id)
 	if err != nil {
+		h.l.Error("MoviesHandler.GetByID", "error", err)
 		http.Error(w, "movie not found", http.StatusNotFound)
 		return
 	}
@@ -109,10 +139,30 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	movieResponse.Year = movie.Year
 	movieResponse.AverageRating = movie.AverageRating
 
-	w.Header().Set("Content-type", "application/json")
-	if err := json.NewEncoder(w).Encode(movieResponse); err != nil {
-		h.l.Error("err encoding movies", "error", err)
+	err = json.NewEncoder(w).Encode(movieResponse)
+	if err != nil {
+		h.l.Error("MoviesHandler.GetByID", "error", err)
 		http.Error(w, "could not get movie", http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *MoviesHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	err := h.s.DeleteByID(r.Context(), id)
+	if err != nil {
+		h.l.Error("MoviesHandler.Delete", "error", err)
+		http.Error(w, "could not delete movie", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
