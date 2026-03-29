@@ -50,9 +50,9 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moviesResponse := make([]MoviesResponse, len(movies))
+	moviesResponse := make([]MovieResponse, len(movies))
 	for i, m := range movies {
-		moviesResponse[i] = MoviesResponse{
+		moviesResponse[i] = MovieResponse{
 			ID:     m.ID.Hex(),
 			Title:  m.Title,
 			Year:   m.Year,
@@ -65,6 +65,34 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(moviesResponse); err != nil {
 		h.l.Error("err encoding movies", "error", err)
 		http.Error(w, "could not get movies", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	movie, err := h.s.GetByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "movie not found", http.StatusNotFound)
+		return
+	}
+
+	var movieResponse MovieResponse
+	movieResponse.Title = movie.Title
+	movieResponse.Genres = movie.Genres
+	movieResponse.ID = movie.ID.Hex()
+	movieResponse.Year = movie.Year
+	movieResponse.Rating = movie.Rating
+
+	w.Header().Set("Content-type", "application/json")
+	if err := json.NewEncoder(w).Encode(movieResponse); err != nil {
+		h.l.Error("err encoding movies", "error", err)
+		http.Error(w, "could not get movie", http.StatusInternalServerError)
 		return
 	}
 }

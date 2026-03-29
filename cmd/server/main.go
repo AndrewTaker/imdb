@@ -39,6 +39,7 @@ func main() {
 	mux.HandleFunc("POST /auth/signin", uh.SignIn)
 	mux.HandleFunc("POST /auth/signup", uh.SignUp)
 	mux.HandleFunc("GET /movies", mh.GetAll)
+	mux.HandleFunc("GET /movies/{id}", mh.GetByID)
 
 	log.Println("listening on 4444")
 	log.Fatal(http.ListenAndServe(":4444", mux))

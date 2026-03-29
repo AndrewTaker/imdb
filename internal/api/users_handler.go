@@ -20,7 +20,8 @@ func NewUsersHandler(s *service.UserService, l *slog.Logger, p *security.TokenSe
 }
 
 func (h *UsersHandler) SignIn(w http.ResponseWriter, r *http.Request) {
-	h.l.Info("/auth/signin request")
+	h.l.Info(getHostWithUri(r), "method", r.Method)
+
 	var payload LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.l.Error("UsersHandler.SignIn", "decoding error", err, "email", payload.Email)
@@ -46,13 +47,17 @@ func (h *UsersHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	token := h.p.Generate(user.ID.Hex(), 24*time.Hour)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"token": token,
-	})
+	}); err != nil {
+		h.l.Error("UsersHandler.SignIn", "encoding error", err, "email", payload.Email)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *UsersHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	h.l.Info("/auth/signup request")
+	h.l.Info(getHostWithUri(r), "method", r.Method)
 	// naming might be confusing
 	// but creating a separate struct for same data feels wrong
 	var payload LoginRequest

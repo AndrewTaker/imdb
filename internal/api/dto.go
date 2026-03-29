@@ -5,7 +5,7 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-type MoviesResponse struct {
+type MovieResponse struct {
 	ID     string   `json:"id"`
 	Title  string   `json:"title"`
 	Genres []string `json:"genres"`
