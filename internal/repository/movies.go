@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -45,6 +44,14 @@ func (r *MoviesRepository) Create(ctx context.Context, title string, genres []st
 	return nil
 }
 
+func (r *MoviesRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
+	if _, err := r.c.DeleteOne(ctx, bson.D{{"_id", id}}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *MoviesRepository) GetAll(ctx context.Context, pag PaginationOptions, sort []SortOptions, filter []FilterOptions) ([]Movie, error) {
 	opts := CreateQueryOptions(pag, sort, filter)
 	filters := CreateFilterOptions(filter)
@@ -70,19 +77,49 @@ func (r *MoviesRepository) GetAll(ctx context.Context, pag PaginationOptions, so
 	return movies, nil
 }
 
-func (r *MoviesRepository) GetByID(ctx context.Context, id string) (*Movie, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid id format: %w", err)
-	}
-
+func (r *MoviesRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*Movie, error) {
 	var movie Movie
-	err = r.c.FindOne(ctx, bson.M{"_id": objID}).Decode(&movie)
+	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&movie)
 	if err != nil {
 		return nil, err
 	}
 
 	return &movie, nil
+}
+
+func (r *MoviesRepository) PartialUpdate(ctx context.Context, id primitive.ObjectID, title *string, year *int, genres *[]string) error {
+	// if genres are not nil
+	// we append to set rather than rewriting values
+	// https://www.mongodb.com/docs/manual/reference/operator/update/addToSet/
+	set := bson.M{}
+	addToSet := bson.M{}
+
+	if title != nil {
+		set["title"] = *title
+	}
+	if year != nil {
+		set["year"] = *year
+	}
+
+	if genres != nil && len(*genres) > 0 {
+		// https://www.mongodb.com/docs/manual/reference/operator/update/each/
+		addToSet["genres"] = bson.M{"$each": *genres}
+	}
+
+	update := bson.M{}
+	if len(set) > 0 {
+		update["$set"] = set
+	}
+	if len(addToSet) > 0 {
+		update["$addToSet"] = addToSet
+	}
+
+	if len(update) == 0 {
+		return nil
+	}
+
+	_, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, update)
+	return err
 }
 
 func (r *MoviesRepository) AlreadyExists(ctx context.Context, title string, year int) bool {
