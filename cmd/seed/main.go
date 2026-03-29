@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"imdb/internal/database"
 	"imdb/internal/repository"
 	"log"
@@ -83,9 +82,6 @@ func main() {
 			log.Printf("could not save %s %s\n", movie, err.Error())
 		}
 	}
-
-	result, _ := mr.GetAll(context.Background(), repository.PaginationOptions{Limit: 0, Offset: 0}, nil, nil)
-	fmt.Println(result)
 }
 
 var movies = []string{

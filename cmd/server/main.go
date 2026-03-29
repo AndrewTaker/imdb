@@ -38,6 +38,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/signin", uh.SignIn)
 	mux.HandleFunc("POST /auth/signup", uh.SignUp)
+	mux.HandleFunc("POST /movies", mh.Create)
 	mux.HandleFunc("GET /movies", mh.GetAll)
 	mux.HandleFunc("GET /movies/{id}", mh.GetByID)
 
