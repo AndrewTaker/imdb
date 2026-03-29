@@ -6,7 +6,6 @@ import (
 	"imdb/internal/service"
 	"log/slog"
 	"net/http"
-	"strconv"
 )
 
 type MoviesHandler struct {
@@ -19,30 +18,10 @@ func NewMoviesHandler(s *service.MoviesService, l *slog.Logger) *MoviesHandler {
 }
 
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	h.l.Info("/movies", "method", r.Method)
-	var limit int = 10
-	var offset int = 0
-	var err error
-
-	limitQuery := r.URL.Query().Get("limit")
-	if limitQuery != "" {
-		limit, err = strconv.Atoi(limitQuery)
-		if err != nil {
-			h.l.Error("err casting atoi for limit %s", limitQuery)
-			http.Error(w, "bad limit value", http.StatusBadRequest)
-			return
-		}
-	}
-
-	offsetQuery := r.URL.Query().Get("limit")
-	if offsetQuery != "" {
-		offset, err = strconv.Atoi(offsetQuery)
-		if err != nil {
-			h.l.Error("err casting atoi for offset %s", offsetQuery)
-			http.Error(w, "bad offset value", http.StatusBadRequest)
-			return
-		}
-	}
+	h.l.Info(getHostWithUri(r), "method", r.Method)
+	limit := getIntQuery(r, "limit", 10)
+	offset := getIntQuery(r, "offset", 0)
+	h.l.Info("pag values", "offset", offset, "limit", limit)
 
 	movies, err := h.s.GetAll(
 		r.Context(),
@@ -58,7 +37,7 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-type", "application/json")
 
-	var moviesResponse []MoviesResponse
+	moviesResponse := make([]MoviesResponse, len(movies))
 	for _, m := range movies {
 		moviesResponse = append(moviesResponse, MoviesResponse{
 			ID:     m.ID.Hex(),
