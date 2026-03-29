@@ -75,6 +75,7 @@ func main() {
 		if err != nil {
 			log.Printf("failed to convert a -> i %s %s\n", movie, err.Error())
 		}
+		m.Genre = strings.ReplaceAll(m.Genre, " ", "")
 		mGenres := strings.Split(m.Genre, ",")
 
 		err = mr.Create(context.Background(), m.Title, mGenres, mYear)
