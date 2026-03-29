@@ -19,6 +19,15 @@ func getIntQuery(r *http.Request, key string, defaultValue int) int {
 	return i
 }
 
+func getStringQuery(r *http.Request, key string, defaultValue string) string {
+	val := r.URL.Query().Get(key)
+	if val == "" {
+		return defaultValue
+	}
+
+	return val
+}
+
 func getHostWithUri(r *http.Request) string {
 	return r.Host + r.RequestURI
 }
