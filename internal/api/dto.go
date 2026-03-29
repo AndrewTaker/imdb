@@ -14,7 +14,13 @@ type MovieResponse struct {
 }
 
 type CreateMovieRequest struct {
-	Title  string   `json:"string"`
+	Title  string   `json:"title"`
 	Genres []string `json:"genres"`
 	Year   int      `json:"year"`
+}
+
+type UpdateMovieRequest struct {
+	Title  *string   `json:"title" bson:"title,omitempty"`
+	Genres *[]string `json:"genres" bson:"genres,omitempty"`
+	Year   *int      `json:"year" bson:"year,omitempty"`
 }
