@@ -11,6 +11,7 @@ type MovieResponse struct {
 	Genres        []string `json:"genres"`
 	Year          int      `json:"year"`
 	AverageRating float64  `json:"average_rating"`
+	VoteCount     int      `json:"vote_count"`
 }
 
 type CreateMovieRequest struct {
