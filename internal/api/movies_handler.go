@@ -68,6 +68,7 @@ func (h *MoviesHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.l.Info(getHostWithUri(r), "method", r.Method)
 	var filters []repository.FilterOptions
+	var sorts []repository.SortOptions
 
 	limit := getIntQuery(r, "limit", 10)
 	offset := getIntQuery(r, "offset", 0)
@@ -77,19 +78,23 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	year := getIntQuery(r, "year", 0)
-	if year != 0 {
-		filters = append(filters, repository.FilterOptions{FilterBy: "year", Value: year})
+	// filter
+	fYear := getIntQuery(r, "f_year", 0)
+	if fYear != 0 {
+		filters = append(filters, repository.FilterOptions{FilterBy: "year", Value: fYear})
 	}
-	genre := getStringQuery(r, "genre", "")
-	if genre != "" {
-		filters = append(filters, repository.FilterOptions{FilterBy: "genres", Value: genre})
+	fGenre := getStringQuery(r, "f_genre", "")
+	if fGenre != "" {
+		filters = append(filters, repository.FilterOptions{FilterBy: "genres", Value: fGenre})
 	}
+
+	// sort
+	sorts = append(sorts, ParseSortQuery(r.URL.Query().Get("sort"))...)
 
 	movies, err := h.s.GetAll(
 		r.Context(),
 		repository.PaginationOptions{Limit: limit, Offset: offset},
-		nil,
+		sorts,
 		filters,
 	)
 	if err != nil {
