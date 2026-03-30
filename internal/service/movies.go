@@ -9,11 +9,12 @@ import (
 )
 
 type MoviesService struct {
-	r *repository.MoviesRepository
+	r      *repository.MoviesRepository
+	rating *repository.RatingRepository
 }
 
-func NewMoviesService(r *repository.MoviesRepository) *MoviesService {
-	return &MoviesService{r: r}
+func NewMoviesService(r *repository.MoviesRepository, rating *repository.RatingRepository) *MoviesService {
+	return &MoviesService{r: r, rating: rating}
 }
 
 func (s *MoviesService) GetAll(
@@ -60,6 +61,35 @@ func (s *MoviesService) DeleteByID(ctx context.Context, id string) error {
 
 	if err := s.r.Delete(ctx, objID); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// this should probably be a transaction
+// https://www.mongodb.com/docs/drivers/go/current/crud/transactions/
+func (s *MoviesService) Rate(ctx context.Context, userID, movieID string, score int) error {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id format: %w", err)
+	}
+
+	mID, err := primitive.ObjectIDFromHex(movieID)
+	if err != nil {
+		return fmt.Errorf("invalid movie id format: %w", err)
+	}
+
+	if err := s.rating.UpsertRating(ctx, mID, uID, score); err != nil {
+		return fmt.Errorf("failed to save rating: %w", err)
+	}
+
+	stats, err := s.rating.CalculateRatingStats(ctx, mID)
+	if err != nil {
+		return fmt.Errorf("failed to calculate new stats: %w", err)
+	}
+
+	if err := s.r.UpdateStats(ctx, mID, stats.AverageRating, stats.VoteCount); err != nil {
+		return fmt.Errorf("failed to sync movie stats: %w", err)
 	}
 
 	return nil
