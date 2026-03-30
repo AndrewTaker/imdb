@@ -20,19 +20,17 @@ func NewMoviesHandler(s *service.MoviesService, l *slog.Logger, token *security.
 }
 
 func (h *MoviesHandler) Create(w http.ResponseWriter, r *http.Request) {
-	h.l.Info(getHostWithUri(r), "method", r.Method)
-
 	var payload CreateMovieRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.l.Error("MoviesHandler.Create", "decoding error", err)
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		ErrorResponse(w, http.StatusBadRequest, ErrBadPayload.Error())
 		return
 	}
 
 	err := h.s.Create(r.Context(), payload.Title, payload.Genres, payload.Year)
 	if err != nil {
 		h.l.Error("MoviesHandler.Create", "db error", err)
-		http.Error(w, "could not save", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
@@ -40,8 +38,6 @@ func (h *MoviesHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MoviesHandler) Update(w http.ResponseWriter, r *http.Request) {
-	h.l.Info(getHostWithUri(r), "method", r.Method)
-
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "id is required", http.StatusBadRequest)
@@ -51,14 +47,14 @@ func (h *MoviesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var payload UpdateMovieRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.l.Error("MoviesHandler.Update", "decoding error", err)
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		ErrorResponse(w, http.StatusBadRequest, ErrBadPayload.Error())
 		return
 	}
 
 	err := h.s.PartialUpdate(r.Context(), id, payload.Title, payload.Year, payload.Genres)
 	if err != nil {
 		h.l.Error("MoviesHandler.Update", "db error", err)
-		http.Error(w, "could not update", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
@@ -66,7 +62,6 @@ func (h *MoviesHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	h.l.Info(getHostWithUri(r), "method", r.Method)
 	var filters []repository.FilterOptions
 	var sorts []repository.SortOptions
 
@@ -99,7 +94,7 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		h.l.Error("MoviesHandler.GetAll", "error", err)
-		http.Error(w, "could not get movies", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
@@ -119,7 +114,7 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(moviesResponse)
 	if err != nil {
 		h.l.Error("MoviesHandler.GetAll", "error", err)
-		http.Error(w, "could not get movies", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 }
@@ -134,7 +129,7 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	movie, err := h.s.GetByID(r.Context(), id)
 	if err != nil {
 		h.l.Error("MoviesHandler.GetByID", "error", err)
-		http.Error(w, "movie not found", http.StatusNotFound)
+		ErrorResponse(w, http.StatusNotFound, "movie not found")
 		return
 	}
 
@@ -149,7 +144,7 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(movieResponse)
 	if err != nil {
 		h.l.Error("MoviesHandler.GetByID", "error", err)
-		http.Error(w, "could not get movie", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 }
@@ -157,14 +152,14 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *MoviesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		ErrorResponse(w, http.StatusBadRequest, ErrBadPath.Error())
 		return
 	}
 
 	err := h.s.DeleteByID(r.Context(), id)
 	if err != nil {
 		h.l.Error("MoviesHandler.Delete", "error", err)
-		http.Error(w, "could not delete movie", http.StatusInternalServerError)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
@@ -174,25 +169,26 @@ func (h *MoviesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *MoviesHandler) Rate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		ErrorResponse(w, http.StatusBadRequest, ErrBadPath.Error())
 		return
 	}
 
 	score := getIntParam(r, "score")
 	if !validRatingScore(score) {
-		http.Error(w, "invalid rating value", http.StatusBadRequest)
+		ErrorResponse(w, http.StatusBadRequest, "invalid rating value, must be >= 1 and <= 10")
 		return
 	}
 
 	userID, err := h.token.GetUserID(r)
 	if userID == "" || err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		ErrorResponse(w, http.StatusUnauthorized, ErrUnauthorized.Error())
 		return
 	}
 
 	err = h.s.Rate(r.Context(), userID, id, score)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		h.l.Error("MoviesHandler.Rate", "error", err)
+		ErrorResponse(w, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 }

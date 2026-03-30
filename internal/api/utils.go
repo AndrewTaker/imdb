@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// extract string query as float64
 func getFloat64Query(r *http.Request, key string, defaultValue float64) float64 {
 	val := r.URL.Query().Get(key)
 	if val == "" {
@@ -19,8 +20,7 @@ func getFloat64Query(r *http.Request, key string, defaultValue float64) float64 
 	return i
 }
 
-// helper: extract int from query params
-// fallback to default value in case of error
+// extract string query as integer
 func getIntQuery(r *http.Request, key string, defaultValue int) int {
 	val := r.URL.Query().Get(key)
 	if val == "" {
@@ -33,6 +33,7 @@ func getIntQuery(r *http.Request, key string, defaultValue int) int {
 	return i
 }
 
+// extract string query as string
 func getStringQuery(r *http.Request, key string, defaultValue string) string {
 	val := r.URL.Query().Get(key)
 	if val == "" {
@@ -42,6 +43,7 @@ func getStringQuery(r *http.Request, key string, defaultValue string) string {
 	return val
 }
 
+// extract string param as integer
 func getIntParam(r *http.Request, key string) int {
 	val := r.PathValue(key)
 	if val == "" {
@@ -56,10 +58,8 @@ func getIntParam(r *http.Request, key string) int {
 	return intVal
 }
 
-func getHostWithUri(r *http.Request) string {
-	return r.Host + r.RequestURI
-}
-
+// validate movie struct score field
+// must be >= 1 && <= 10
 func validRatingScore(s int) bool {
 	if s == -1 {
 		return false

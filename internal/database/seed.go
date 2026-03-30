@@ -13,6 +13,8 @@ func createCollection(d *mongo.Database, name string) error {
 	return d.CreateCollection(context.Background(), name)
 }
 
+// function to create collections
+// called inside NewDatabase()
 func seedCollections(d *mongo.Database, names []string) error {
 	for _, name := range names {
 		if err := createCollection(d, name); err != nil {
@@ -23,6 +25,9 @@ func seedCollections(d *mongo.Database, names []string) error {
 	return nil
 }
 
+// function to create indexes
+// since we only have a few - we can use single function
+// called inside NewDatabase()
 func ensureIndexes(d *mongo.Database) error {
 	// unique constraint for user's email
 	userIndex := mongo.IndexModel{

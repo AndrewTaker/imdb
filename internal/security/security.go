@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// wrapper around bcrypt.GenerateFromPassword
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
@@ -16,11 +17,13 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
+// wrapper around bcrypt.CompareHashAndPassword
 func CheckPassword(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
+// random string of size 32 bits
 func GenerateRandomToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
