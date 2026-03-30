@@ -3,18 +3,20 @@ package api
 import (
 	"encoding/json"
 	"imdb/internal/repository"
+	"imdb/internal/security"
 	"imdb/internal/service"
 	"log/slog"
 	"net/http"
 )
 
 type MoviesHandler struct {
-	s *service.MoviesService
-	l *slog.Logger
+	s     *service.MoviesService
+	l     *slog.Logger
+	token *security.TokenService
 }
 
-func NewMoviesHandler(s *service.MoviesService, l *slog.Logger) *MoviesHandler {
-	return &MoviesHandler{s: s, l: l}
+func NewMoviesHandler(s *service.MoviesService, l *slog.Logger, token *security.TokenService) *MoviesHandler {
+	return &MoviesHandler{s: s, l: l, token: token}
 }
 
 func (h *MoviesHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -104,18 +106,17 @@ func (h *MoviesHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 			Year:          m.Year,
 			Genres:        m.Genres,
 			AverageRating: m.AverageRating,
+			VoteCount:     m.VoteCount,
 		}
 	}
 
+	w.Header().Set("Content-type", "application/json")
 	err = json.NewEncoder(w).Encode(moviesResponse)
 	if err != nil {
 		h.l.Error("MoviesHandler.GetAll", "error", err)
 		http.Error(w, "could not get movies", http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +139,7 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	movieResponse.ID = movie.ID.Hex()
 	movieResponse.Year = movie.Year
 	movieResponse.AverageRating = movie.AverageRating
+	movieResponse.VoteCount = movie.VoteCount
 
 	err = json.NewEncoder(w).Encode(movieResponse)
 	if err != nil {
@@ -145,9 +147,6 @@ func (h *MoviesHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not get movie", http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *MoviesHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -165,4 +164,30 @@ func (h *MoviesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *MoviesHandler) Rate(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	score := getIntParam(r, "score")
+	if !validRatingScore(score) {
+		http.Error(w, "invalid rating value", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := h.token.GetUserID(r)
+	if userID == "" || err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err = h.s.Rate(r.Context(), userID, id, score)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }
