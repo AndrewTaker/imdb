@@ -24,6 +24,7 @@ func seedCollections(d *mongo.Database, names []string) error {
 }
 
 func ensureIndexes(d *mongo.Database) error {
+	// unique constraint for user's email
 	userIndex := mongo.IndexModel{
 		Keys: bson.D{
 			{Key: "email", Value: 1},
@@ -32,6 +33,7 @@ func ensureIndexes(d *mongo.Database) error {
 	}
 	_, err := d.Collection("users").Indexes().CreateOne(context.Background(), userIndex)
 
+	// case insensetive search for genres
 	genresIndex := mongo.IndexModel{
 		Keys: bson.D{{Key: "genres", Value: 1}},
 		Options: options.Index().SetCollation(&options.Collation{
@@ -39,7 +41,19 @@ func ensureIndexes(d *mongo.Database) error {
 			Strength: 2,
 		}),
 	}
-	_, err = d.Collection("movies").Indexes().CreateOne(context.Background(), genresIndex)
+
+	// unique constraint for title + year
+	movieIndex := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "title", Value: 1},
+			{Key: "year", Value: 1},
+		},
+		Options: options.Index().SetUnique(true),
+	}
+	_, err = d.Collection("movies").Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		genresIndex,
+		movieIndex,
+	})
 
 	return err
 }
