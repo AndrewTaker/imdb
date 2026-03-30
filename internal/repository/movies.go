@@ -24,6 +24,11 @@ type Rating struct {
 	Score   int                `bson:"score"` // 1-10
 }
 
+type RatingStats struct {
+	AverageRating float64 `bson:"average_rating"`
+	VoteCount     int     `bson:"vote_count"`
+}
+
 type MoviesRepository struct {
 	c *mongo.Collection
 }
@@ -124,10 +129,55 @@ func (r *MoviesRepository) PartialUpdate(ctx context.Context, id primitive.Objec
 
 func (r *MoviesRepository) AlreadyExists(ctx context.Context, title string, year int) bool {
 	filter := bson.D{{"title", title}, {"year", year}}
+
 	result, err := r.c.CountDocuments(ctx, filter, nil)
 	if err != nil || result > 0 {
 		return true
 	}
 
 	return false
+}
+
+func (r *MoviesRepository) CalculateRating(
+	ctx context.Context,
+	ratingsColl *mongo.Collection,
+	movieID primitive.ObjectID,
+) (*RatingStats, error) {
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"movie_id": movieID}}},
+		{{Key: "$group", Value: bson.M{
+			// "_id":            nil,
+			"average_rating": bson.M{"$avg": "$score"},
+			"vote_count":     bson.M{"$sum": 1},
+		}}},
+	}
+
+	cursor, err := ratingsColl.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []RatingStats
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return &RatingStats{AverageRating: 0, VoteCount: 0}, nil
+	}
+
+	return &results[0], nil
+}
+
+func (r *MoviesRepository) UpdateStats(ctx context.Context, id primitive.ObjectID, avg float64, count int) error {
+	update := bson.M{
+		"$set": bson.M{
+			"average_rating": avg,
+			"vote_count":     count,
+		},
+	}
+
+	_, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, update)
+	return err
 }
